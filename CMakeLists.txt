@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(bearjpeg
     src/main.cpp
+    src/args.cpp
 )
 
 target_include_directories(bearjpeg PRIVATE
