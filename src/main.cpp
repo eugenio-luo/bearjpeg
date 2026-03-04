@@ -5,7 +5,6 @@
 int
 main(int argc, const char *argv[])
 {
-    /* the first command arg is just the binary name */
     auto args = std::span{argv + 1, static_cast<size_t>(argc - 1)};
     std::expected<ArgOptions, std::string> options = parseOptions(args);
     if (!options) {
@@ -13,7 +12,7 @@ main(int argc, const char *argv[])
         return 1;
     }
 
-    if (options->ao_help.value_or(false)) {
+    if (options->getHelp()) {
         printHelp();
         return 0;
     }

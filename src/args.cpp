@@ -4,40 +4,46 @@
 
 #include "args.hpp"
 
+static constexpr std::string_view INPUT_FILE_STR = "in=";
+static constexpr std::string_view OUTPUT_FILE_STR = "out=";
+static constexpr std::string_view HELP_STR = "-h";
+static constexpr std::string_view HELP_OUTPUT = "help: bearjpeg in=file1.jpg out=file2.ppm\n";
+static constexpr std::string_view ERROR_OUTPUT = "error: {0}\ntry bearjpeg -h\n";
+
 using namespace std::string_view_literals;
 
-std::expected<ArgOptions, std::string>
-ArgOptions::valid(void)
+static std::expected<ArgOptions, std::string>
+validOptions(const ArgOptions& options, const std::vector<std::string_view>& unrecognized)
 {
-    if (!ao_unrecognized.empty()) {
-        auto chars = ao_unrecognized | std::views::join_with(", "sv);
+    if (!unrecognized.empty()) {
+        auto chars = unrecognized | std::views::join_with(", "sv);
         return std::unexpected("unrecognized options: " + std::string(chars.begin(), chars.end()));
     }
 
-    if (ao_help.value_or(false)) {
-        return *this;
+    if (options.getHelp()) {
+        return options;
     }
 
-    if (!ao_input) {
+    if (options.getInput() == "") {
         return std::unexpected("missing input file");
-    } else if (!ao_output) {
+    } else if (options.getOutput() == "") {
         return std::unexpected("missing output file");
     }
 
-    return *this;
+    return options;
 }
 
 static void
-parseArg(ArgOptions& options, std::string_view arg)
+parseArg(ArgOptions& options, std::vector<std::string_view>& unrecognized, std::string_view arg)
 {
-    if (arg.starts_with(options.INPUT_FILE_STR)) {
-        options.ao_input = arg.substr(options.INPUT_FILE_STR.size());
-    } else if (arg.starts_with(options.OUTPUT_FILE_STR)) {
-        options.ao_output = arg.substr(options.OUTPUT_FILE_STR.size());
-    } else if (arg == options.HELP_STR) {
-        options.ao_help = true;
+    if (arg.starts_with(INPUT_FILE_STR)) {
+        options.setInput(arg.substr(INPUT_FILE_STR.size()));
+    } else if (arg.starts_with(OUTPUT_FILE_STR)) {
+        options.setOutput(arg.substr(OUTPUT_FILE_STR.size()));
+    } else if (arg == HELP_STR) {
+        options.setHelp(true);
     } else {
-        options.ao_unrecognized.push_back(arg);
+        unrecognized.push_back(arg);
     }
 }
 
@@ -45,19 +51,21 @@ std::expected<ArgOptions, std::string>
 parseOptions(const std::span<const char * const> args)
 {
     ArgOptions options;
-    std::ranges::for_each(args, [&options](const auto arg){ parseArg(options, arg); });
+    std::vector<std::string_view> unrecognized;
 
-    return options.valid();
+    std::ranges::for_each(args, [&options, &unrecognized](const auto arg){ parseArg(options, unrecognized, arg); });
+
+    return validOptions(options, unrecognized);
 }
 
 void
-printError(std::string_view error)
+printError(const std::string_view error)
 {
-    std::print("error: {0}\ntry bearjpeg help\n", error);
+    std::print(ERROR_OUTPUT, error);
 }
 
 void
 printHelp(void)
 {
-    std::print("help: bearjpeg input=file1.jpg output=file2.ppm\n");
+    std::print(HELP_OUTPUT);
 }
